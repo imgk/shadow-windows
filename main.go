@@ -10,8 +10,14 @@ import (
 	"golang.org/x/sys/windows/svc"
 	"golang.org/x/sys/windows/svc/eventlog"
 
-	"github.com/imgk/shadow/windows/pkg"
+	//protocols
+	_ "github.com/imgk/shadow/protocol/http"
+	_ "github.com/imgk/shadow/protocol/shadowsocks"
+	_ "github.com/imgk/shadow/protocol/socks"
+	_ "github.com/imgk/shadow/protocol/trojan"
 	_ "github.com/imgk/shadow/windows/res"
+
+	"github.com/imgk/shadow/windows/pkg"
 )
 
 const (

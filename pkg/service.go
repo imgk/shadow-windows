@@ -25,7 +25,7 @@ type Service struct {
 func (m Service) Execute(args []string, r <-chan svc.ChangeRequest, changes chan<- svc.Status) (ssec bool, errno uint32) {
 	changes <- svc.Status{State: svc.StartPending}
 
-	app, err := app.NewApp(m.File, time.Minute)
+	app, err := app.NewApp(m.File, time.Minute, nil)
 	if err != nil {
 		m.Log.Error(1, err.Error())
 		changes <- svc.Status{State: svc.Stopped}

@@ -21,12 +21,13 @@ Developed by John Xiong (https://imgk.cc)
 https://github.com/imgk/shadow
 `
 
-type ManagerWindow struct {
-	*walk.MainWindow
+type servers map[string]string
+
+type Monitor struct {
 	ServiceName string
 	ServiceDesc string
 
-	icon           *walk.Icon
+	mainWindow     *walk.MainWindow
 	boxServer      *walk.ComboBox
 	boxMode        *walk.ComboBox
 	buttonInstall  *walk.PushButton
@@ -37,28 +38,29 @@ type ManagerWindow struct {
 	itemStatus     *walk.StatusBarItem
 	windowSize     walk.Size
 	menus          []declarative.MenuItem
-	statusBar      []declarative.StatusBarItem
-	serverSlice    []string
-	ruleSlice      []string
-	ruleMap        map[string]string
+	statusBars     []declarative.StatusBarItem
+	servers        []string
+	mServers       map[string]string
+	rules          []string
+	mRules         map[string]string
+
+	notifyIcon *walk.NotifyIcon
+	icon       *walk.Icon
 }
 
-func (m *ManagerWindow) setup(exit func()) (err error) {
+func (m *Monitor) Run() (err error) {
+	if m.icon, err = walk.NewIconFromResourceWithSize("$shadow.ico", walk.Size{16, 16}); err != nil {
+		return
+	}
+
 	m.windowSize = walk.Size{400, 175}
 	m.menus = []declarative.MenuItem{
 		declarative.Menu{
 			Text: "&Server",
 			Items: []declarative.MenuItem{
 				declarative.Action{
-					Text:        "&Manage",
-					Enabled:     declarative.Bind("enabledCB.Checked"),
-					Visible:     declarative.Bind("!openHiddenCB.Checked"),
-					Shortcut:    declarative.Shortcut{walk.ModControl, walk.KeyM},
-					OnTriggered: m.Manage,
-				},
-				declarative.Action{
 					Text:        "E&xit",
-					OnTriggered: exit,
+					OnTriggered: m.exit,
 				},
 			},
 		},
@@ -67,13 +69,13 @@ func (m *ManagerWindow) setup(exit func()) (err error) {
 			Items: []declarative.MenuItem{
 				declarative.Action{
 					Text:        "About",
-					OnTriggered: m.About,
+					OnTriggered: m.about,
 				},
 			},
 		},
 	}
 
-	m.statusBar = []declarative.StatusBarItem{
+	m.statusBars = []declarative.StatusBarItem{
 		declarative.StatusBarItem{
 			AssignTo: &m.itemStatus,
 			Text:     "",
@@ -81,14 +83,14 @@ func (m *ManagerWindow) setup(exit func()) (err error) {
 	}
 
 	err = declarative.MainWindow{
-		AssignTo:       &m.MainWindow,
+		AssignTo:       &m.mainWindow,
 		Name:           "Shadow",
 		Title:          "Shadow: A Transparent Proxy for Windows, Linux and macOS",
 		Icon:           m.icon,
 		Persistent:     true,
 		Layout:         declarative.VBox{},
 		MenuItems:      m.menus,
-		StatusBarItems: m.statusBar,
+		StatusBarItems: m.statusBars,
 		Children: []declarative.Widget{
 			declarative.GroupBox{
 				Title:  "Shadow Config",
@@ -121,27 +123,27 @@ func (m *ManagerWindow) setup(exit func()) (err error) {
 					declarative.PushButton{
 						AssignTo:  &m.buttonStart,
 						Text:      "Install",
-						OnClicked: m.Install,
+						OnClicked: m.install,
 					},
 					declarative.PushButton{
 						AssignTo:  &m.buttonStop,
 						Text:      "Remove",
-						OnClicked: m.Remove,
+						OnClicked: m.remove,
 					},
 					declarative.PushButton{
 						AssignTo:  &m.buttonGenerate,
 						Text:      "Generate",
-						OnClicked: m.Generate,
+						OnClicked: m.generate,
 					},
 					declarative.PushButton{
 						AssignTo:  &m.buttonStart,
 						Text:      "Start",
-						OnClicked: m.Start,
+						OnClicked: m.start,
 					},
 					declarative.PushButton{
 						AssignTo:  &m.buttonStop,
 						Text:      "Stop",
-						OnClicked: m.Stop,
+						OnClicked: m.stop,
 					},
 				},
 			},
@@ -151,171 +153,202 @@ func (m *ManagerWindow) setup(exit func()) (err error) {
 		return
 	}
 
-	newStyle := win.GetWindowLong(m.MainWindow.Handle(), win.GWL_STYLE) & ^win.WS_THICKFRAME & ^win.WS_MAXIMIZEBOX
-	win.SetWindowLong(m.MainWindow.Handle(), win.GWL_STYLE, newStyle)
+	newStyle := win.GetWindowLong(m.mainWindow.Handle(), win.GWL_STYLE) & ^win.WS_THICKFRAME & ^win.WS_MAXIMIZEBOX
+	win.SetWindowLong(m.mainWindow.Handle(), win.GWL_STYLE, newStyle)
 
-	m.MainWindow.SetSize(m.windowSize)
-	m.MainWindow.Closing().Attach(m.Close)
-	m.LoadRules()
-	m.LoadServers()
-	m.QueryAndSetStatus()
-	return
+	m.mainWindow.SetSize(m.windowSize)
+	m.mainWindow.Closing().Attach(m.close)
+	m.loadRules()
+	m.loadServers()
+	m.queryAndSetStatus()
+
+	if m.notifyIcon, err = walk.NewNotifyIcon(m.mainWindow); err != nil {
+		return
+	}
+	defer m.notifyIcon.Dispose()
+
+	m.notifyIcon.SetToolTip("A Transparent Proxy for Windows, Linux and macOS")
+	m.notifyIcon.SetIcon(m.icon)
+	m.notifyIcon.MouseDown().Attach(m.mouseClicked)
+
+	exitAction := walk.NewAction()
+	if err = exitAction.SetText("E&xit"); err != nil {
+		return
+	}
+	exitAction.Triggered().Attach(m.exit)
+	if err = m.notifyIcon.ContextMenu().Actions().Add(exitAction); err != nil {
+		return
+	}
+
+	m.notifyIcon.SetVisible(true)
+	m.mainWindow.Run()
+	return nil
 }
 
-// hide window
-func (m *ManagerWindow) Close(canceled *bool, reason walk.CloseReason) {
+func (m *Monitor) mouseClicked(x, y int, button walk.MouseButton) {
+	if button == walk.LeftButton {
+		m.mainWindow.Show()
+	}
+}
+
+func (m *Monitor) exit() {
+	ControlService(m.ServiceName, svc.Stop, svc.Stopped)
+	walk.App().Exit(0)
+}
+
+func (m *Monitor) close(canceled *bool, reason walk.CloseReason) {
 	*canceled = true
-	m.MainWindow.Hide()
+	m.mainWindow.Hide()
 }
 
-func (m *ManagerWindow) Manage() {}
-
-// show window
-func (m *ManagerWindow) Show() {
-	m.MainWindow.SetSize(m.windowSize)
-	m.QueryAndSetStatus()
-	m.MainWindow.Show()
+func (m *Monitor) show() {
+	m.mainWindow.SetSize(m.windowSize)
+	m.queryAndSetStatus()
+	m.mainWindow.Show()
 }
 
-func (m *ManagerWindow) Install() {
+func (m *Monitor) install() {
 	conf, err := GetConfig("config.json")
 	if err != nil {
-		m.Error(err)
+		m.error(err)
 		return
 	}
 	exist, err := IsExistService(m.ServiceName)
 	if err != nil {
-		m.Error(err)
+		m.error(err)
 		return
 	}
 	if exist {
+	m.info("Service is Installed...")
 		return
 	}
 	if err := InstallService(m.ServiceName, m.ServiceDesc, []string{"-c", conf}); err != nil {
-		m.Error(err)
+		m.error(err)
 		return
 	}
-	m.Info("Service is Installed...")
+	m.info("Service is Installed...")
 }
 
-func (m *ManagerWindow) Remove() {
+func (m *Monitor) remove() {
 	exist, err := IsExistService(m.ServiceName)
 	if err != nil {
-		m.Error(err)
+		m.error(err)
 		return
 	}
 	if !exist {
+		m.info("Service is Removed...")
 		return
 	}
 	if err := RemoveService(m.ServiceName); err != nil {
-		m.Error(err)
+		m.error(err)
 		return
 	}
-	m.Info("Service is Removed...")
+	m.info("Service is Removed...")
 }
 
-func (m *ManagerWindow) Generate() {
+func (m *Monitor) generate() {
 	server := m.boxServer.Text()
 	if server == "" {
-		m.Error(errors.New("Please select a server"))
+		m.error(errors.New("Please select a server"))
 		return
 	}
 	mode := m.boxMode.Text()
 	if mode == "" {
-		m.Error(errors.New("Please select a mode"))
+		m.error(errors.New("Please select a mode"))
 		return
 	}
-	apps, cidr, err := ParseRules(m.ruleMap[mode])
+	apps, cidr, err := ParseRules(m.mRules[mode])
 	if err != nil {
-		m.Error(err)
+		m.error(err)
 		return
 	}
-	if err := Generate(server, apps, cidr); err != nil {
-		m.Error(err)
+	if err := Generate(m.mServers[server], apps, cidr); err != nil {
+		m.error(err)
 		return
 	}
-	m.Info("Config is Generated...")
+	m.info("Config is Generated...")
 }
 
-func (m *ManagerWindow) Start() {
+func (m *Monitor) start() {
 	running, err := IsRunningService(m.ServiceName)
 	if err != nil {
-		m.Error(err)
+		m.error(err)
 		return
 	}
 	if running {
+		m.info("Service is Running...")
 		return
 	}
 	if err := StartService(m.ServiceName); err != nil {
-		m.Error(err)
+		m.error(err)
 		return
 	}
-	m.Info("Service is Running...")
+	m.info("Service is Running...")
 	time.Sleep(500 * time.Millisecond)
-	m.QueryAndSetStatus()
+	m.queryAndSetStatus()
 }
 
-func (m *ManagerWindow) Stop() {
+func (m *Monitor) stop() {
 	running, err := IsRunningService(m.ServiceName)
 	if err != nil {
-		m.Error(err)
+		m.error(err)
 		return
 	}
 	if !running {
+		m.info("Service is Stopped...")
 		return
 	}
 	if err := ControlService(m.ServiceName, svc.Stop, svc.Stopped); err != nil {
-		m.Error(err)
+		m.error(err)
 		return
 	}
-	m.Info("Service is Stopped...")
-	m.QueryAndSetStatus()
+	m.info("Service is Stopped...")
+	m.queryAndSetStatus()
 }
 
-func (m *ManagerWindow) LoadRules() {
+func (m *Monitor) loadRules() {
 	rules, err := GetRuleDir("rules")
 	if err != nil {
 		return
 	}
-	m.ruleSlice, m.ruleMap, err = GetRules(rules)
+	m.rules, m.mRules, err = GetRules(rules)
 	if err != nil {
-		m.Error(err)
+		m.error(err)
 		return
 	}
-	m.boxMode.SetModel(m.ruleSlice)
+	m.boxMode.SetModel(m.rules)
 	return
 }
 
-func (m *ManagerWindow) LoadServers() {
+func (m *Monitor) loadServers() {
 	config, err := GetConfig("servers.json")
 	if err != nil {
 		return
 	}
 	b, err := ioutil.ReadFile(config)
 	if err != nil {
-		m.Error(err)
+		m.error(err)
 		return
 	}
 
-	type Server struct {
-		Servers []string
-	}
-
-	s := Server{}
-	if err := json.Unmarshal(b, &s); err != nil {
-		m.Error(err)
+	servers := servers{}
+	if err := json.Unmarshal(b, &servers); err != nil {
+		m.error(err)
 		return
 	}
-	m.serverSlice = s.Servers
-	m.boxServer.SetModel(m.serverSlice)
+	keys := make([]string, 0, len(servers))
+	for k, _ := range servers {
+		keys = append(keys, k)
+	}
+	m.servers = keys
+	m.boxServer.SetModel(keys)
 	return
 }
 
-// query service status
-func (m *ManagerWindow) QueryAndSetStatus() {
+func (m *Monitor) queryAndSetStatus() {
 	running, err := IsRunningService(m.ServiceName)
 	if err != nil {
-		m.Error(err)
+		m.error(err)
 		return
 	}
 	if running {
@@ -325,72 +358,14 @@ func (m *ManagerWindow) QueryAndSetStatus() {
 	m.itemStatus.SetText("Shadow is not Running")
 }
 
-func (m *ManagerWindow) About() {
-	walk.MsgBox(m.MainWindow, "About", about, walk.MsgBoxIconInformation)
+func (m *Monitor) about() {
+	walk.MsgBox(m.mainWindow, "About", about, walk.MsgBoxIconInformation)
 }
 
-// show info message
-func (m *ManagerWindow) Info(msg string) {
-	walk.MsgBox(m.MainWindow, "Info", msg, walk.MsgBoxIconInformation)
+func (m *Monitor) info(msg string) {
+	walk.MsgBox(m.mainWindow, "Info", msg, walk.MsgBoxIconInformation)
 }
 
-// show error message
-func (m *ManagerWindow) Error(err error) {
-	walk.MsgBox(m.MainWindow, "Error", err.Error(), walk.MsgBoxIconError)
-}
-
-type Monitor struct {
-	ManagerWindow
-	ServiceName string
-	ServiceDesc string
-
-	notifyIcon *walk.NotifyIcon
-	icon       *walk.Icon
-}
-
-func (m *Monitor) Run() (err error) {
-	if m.icon, err = walk.NewIconFromResourceWithSize("$shadow.ico", walk.Size{16, 16}); err != nil {
-		return
-	}
-
-	m.ManagerWindow.ServiceName = m.ServiceName
-	m.ManagerWindow.ServiceDesc = m.ServiceDesc
-	m.ManagerWindow.icon = m.icon
-	if err = m.ManagerWindow.setup(m.Exit); err != nil {
-		return
-	}
-
-	if m.notifyIcon, err = walk.NewNotifyIcon(m.ManagerWindow.MainWindow); err != nil {
-		return
-	}
-	defer m.notifyIcon.Dispose()
-
-	m.notifyIcon.SetToolTip("A Transparent Proxy for Windows, Linux and macOS")
-	m.notifyIcon.SetIcon(m.icon)
-
-	m.notifyIcon.MouseDown().Attach(m.mouseClicked)
-
-	exitAction := walk.NewAction()
-	if err = exitAction.SetText("E&xit"); err != nil {
-		return
-	}
-	exitAction.Triggered().Attach(m.Exit)
-	if err = m.notifyIcon.ContextMenu().Actions().Add(exitAction); err != nil {
-		return
-	}
-
-	m.notifyIcon.SetVisible(true)
-	m.ManagerWindow.MainWindow.Run()
-	return nil
-}
-
-func (m *Monitor) mouseClicked(x, y int, button walk.MouseButton) {
-	if button == walk.LeftButton {
-		m.ManagerWindow.Show()
-	}
-}
-
-func (m *Monitor) Exit() {
-	ControlService(m.ServiceName, svc.Stop, svc.Stopped)
-	walk.App().Exit(0)
+func (m *Monitor) error(err error) {
+	walk.MsgBox(m.mainWindow, "Error", err.Error(), walk.MsgBoxIconError)
 }
