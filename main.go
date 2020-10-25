@@ -5,6 +5,7 @@ package main
 import (
 	"flag"
 	"fmt"
+	"log"
 	"os"
 
 	"golang.org/x/sys/windows/svc"
@@ -28,7 +29,7 @@ const (
 func main() {
 	isIntSess, err := svc.IsAnInteractiveSession()
 	if err != nil {
-		panic(fmt.Errorf("failed to determine if we are running in an interactive session: %v", err))
+		log.Panic(fmt.Errorf("failed to determine if we are running in an interactive session: %v", err))
 	}
 	if !isIntSess {
 		file := flag.String("c", "config.json", "config file")
@@ -36,7 +37,7 @@ func main() {
 
 		elog, err := eventlog.Open(ServiceName)
 		if err != nil {
-			panic(err)
+			log.Panic(err)
 		}
 		defer elog.Close()
 
@@ -55,7 +56,7 @@ func main() {
 			ServiceDesc: ServiceDesc,
 		}
 		if err := monitor.Run(); err != nil {
-			panic(err)
+			log.Panic(err)
 		}
 		return
 	}
@@ -64,25 +65,25 @@ func main() {
 	case "/install":
 		conf, err := pkg.GetConfig("config.json")
 		if err != nil {
-			panic(err)
+			log.Panic(err)
 		}
 		if err := pkg.InstallService(ServiceName, ServiceDesc, []string{"-c", conf}); err != nil {
-			panic(err)
+			log.Panic(err)
 		}
 		fmt.Println("service installed successfully")
 	case "/remove":
 		if err := pkg.RemoveService(ServiceName); err != nil {
-			panic(err)
+			log.Panic(err)
 		}
 		fmt.Println("service removed successfully")
 	case "/start":
 		if err := pkg.StartService(ServiceName); err != nil {
-			panic(err)
+			log.Panic(err)
 		}
 		fmt.Println("service started successfully")
 	case "/stop":
 		if err := pkg.ControlService(ServiceName, svc.Stop, svc.Stopped); err != nil {
-			panic(err)
+			log.Panic(err)
 		}
 		fmt.Println("service stopped successfully")
 	default:
@@ -91,7 +92,7 @@ func main() {
 			ServiceDesc: ServiceDesc,
 		}
 		if err := monitor.Run(); err != nil {
-			panic(err)
+			log.Panic(err)
 		}
 	}
 }
