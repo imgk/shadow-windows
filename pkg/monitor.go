@@ -15,13 +15,10 @@ import (
 	"github.com/lxn/win"
 )
 
-const about = `
-Shadow: A Transparent Proxy for Windows, Linux and macOS
+const about = `Shadow: A Transparent Proxy for Windows, Linux and macOS
 Developed by John Xiong (https://imgk.cc)
 https://github.com/imgk/shadow
 `
-
-type servers map[string]string
 
 type Monitor struct {
 	ServiceName string
@@ -53,11 +50,15 @@ func (m *Monitor) Run() (err error) {
 		return
 	}
 
-	m.windowSize = walk.Size{400, 175}
+	m.windowSize = walk.Size{550, 175}
 	m.menus = []declarative.MenuItem{
 		declarative.Menu{
 			Text: "&Server",
 			Items: []declarative.MenuItem{
+				declarative.Action{
+					Text:        "&Server",
+					OnTriggered: nil,
+				},
 				declarative.Action{
 					Text:        "E&xit",
 					OnTriggered: m.exit,
@@ -160,7 +161,7 @@ func (m *Monitor) Run() (err error) {
 	m.mainWindow.Closing().Attach(m.close)
 	m.loadRules()
 	m.loadServers()
-	m.queryAndSetStatus()
+	m.setStatus()
 
 	if m.notifyIcon, err = walk.NewNotifyIcon(m.mainWindow); err != nil {
 		return
@@ -203,7 +204,7 @@ func (m *Monitor) close(canceled *bool, reason walk.CloseReason) {
 
 func (m *Monitor) show() {
 	m.mainWindow.SetSize(m.windowSize)
-	m.queryAndSetStatus()
+	m.setStatus()
 	m.mainWindow.Show()
 }
 
@@ -219,7 +220,7 @@ func (m *Monitor) install() {
 		return
 	}
 	if exist {
-	m.info("Service is Installed...")
+		m.info("Service is Installed...")
 		return
 	}
 	if err := InstallService(m.ServiceName, m.ServiceDesc, []string{"-c", conf}); err != nil {
@@ -285,7 +286,7 @@ func (m *Monitor) start() {
 	}
 	m.info("Service is Running...")
 	time.Sleep(500 * time.Millisecond)
-	m.queryAndSetStatus()
+	m.setStatus()
 }
 
 func (m *Monitor) stop() {
@@ -303,7 +304,7 @@ func (m *Monitor) stop() {
 		return
 	}
 	m.info("Service is Stopped...")
-	m.queryAndSetStatus()
+	m.setStatus()
 }
 
 func (m *Monitor) loadRules() {
@@ -331,7 +332,7 @@ func (m *Monitor) loadServers() {
 		return
 	}
 
-	servers := servers{}
+	servers := map[string]string{}
 	if err := json.Unmarshal(b, &servers); err != nil {
 		m.error(err)
 		return
@@ -345,7 +346,7 @@ func (m *Monitor) loadServers() {
 	return
 }
 
-func (m *Monitor) queryAndSetStatus() {
+func (m *Monitor) setStatus() {
 	running, err := IsRunningService(m.ServiceName)
 	if err != nil {
 		m.error(err)

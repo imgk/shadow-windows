@@ -16,9 +16,9 @@ import (
 	_ "github.com/imgk/shadow/protocol/shadowsocks"
 	_ "github.com/imgk/shadow/protocol/socks"
 	_ "github.com/imgk/shadow/protocol/trojan"
-	_ "github.com/imgk/shadow/windows/res"
+	_ "github.com/imgk/shadow-windows/res"
 
-	"github.com/imgk/shadow/windows/pkg"
+	"github.com/imgk/shadow-windows/pkg"
 )
 
 const (
@@ -51,7 +51,7 @@ func main() {
 	}
 
 	if len(os.Args) < 2 {
-		monitor := &pkg.Monitor{
+		monitor := pkg.Monitor{
 			ServiceName: ServiceName,
 			ServiceDesc: ServiceDesc,
 		}
@@ -87,7 +87,7 @@ func main() {
 		}
 		fmt.Println("service stopped successfully")
 	default:
-		monitor := &pkg.Monitor{
+		monitor := pkg.Monitor{
 			ServiceName: ServiceName,
 			ServiceDesc: ServiceDesc,
 		}
