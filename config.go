@@ -1,6 +1,6 @@
 // +build windows
 
-package pkg
+package main
 
 import (
 	"bufio"
@@ -18,9 +18,9 @@ import (
 	"github.com/imgk/shadow/app"
 )
 
-func GetConfig(conf string) (string, error) {
+func absFilePath(conf string) (string, error) {
 	if filepath.IsAbs(conf) {
-		return conf, checkConfig(conf)
+		return conf, checkFile(conf)
 	}
 
 	dir, err := os.Getwd()
@@ -29,10 +29,10 @@ func GetConfig(conf string) (string, error) {
 	}
 	conf = filepath.Join(dir, conf)
 
-	return conf, checkConfig(conf)
+	return conf, checkFile(conf)
 }
 
-func checkConfig(conf string) error {
+func checkFile(conf string) error {
 	info, err := os.Stat(conf)
 	if err != nil {
 		return err
@@ -45,9 +45,9 @@ func checkConfig(conf string) error {
 	return nil
 }
 
-func GetRuleDir(conf string) (string, error) {
+func absDirPath(conf string) (string, error) {
 	if filepath.IsAbs(conf) {
-		return conf, checkRuleDir(conf)
+		return conf, checkDir(conf)
 	}
 
 	dir, err := os.Getwd()
@@ -56,10 +56,10 @@ func GetRuleDir(conf string) (string, error) {
 	}
 	conf = filepath.Join(dir, conf)
 
-	return conf, checkRuleDir(conf)
+	return conf, checkDir(conf)
 }
 
-func checkRuleDir(conf string) error {
+func checkDir(conf string) error {
 	info, err := os.Stat(conf)
 	if err != nil {
 		return err
@@ -72,7 +72,7 @@ func checkRuleDir(conf string) error {
 	return errors.New("not a dir")
 }
 
-func GetRules(rules string) (s []string, m map[string]string, err error) {
+func readRules(rules string) (s []string, m map[string]string, err error) {
 	dirs, err := ioutil.ReadDir(rules)
 	if err != nil {
 		return
@@ -116,7 +116,7 @@ func GetRules(rules string) (s []string, m map[string]string, err error) {
 	return
 }
 
-func ParseRules(file string) (apps, cidr []string, err error) {
+func parseRules(file string) (apps, cidr []string, err error) {
 	f, err := os.Open(file)
 	if err != nil {
 		return
@@ -153,12 +153,12 @@ func ParseRules(file string) (apps, cidr []string, err error) {
 	return
 }
 
-func Generate(server string, apps, cidr []string) (err error) {
-	proxyServer, err := ParseServer(server)
+func generate(server string, apps, cidr []string) (err error) {
+	proxyServer, err := parseServer(server)
 	if err != nil {
 		return
 	}
-	config, err := GetConfig("config.json")
+	config, err := absFilePath("config.json")
 	if err != nil {
 		return
 	}
@@ -167,7 +167,7 @@ func Generate(server string, apps, cidr []string) (err error) {
 	if err = json.Unmarshal(b, &conf); err != nil {
 		return
 	}
-	nameServer, err := ParseServer(conf.NameServer)
+	nameServer, err := parseServer(conf.NameServer)
 	if err != nil {
 		return
 	}
@@ -193,7 +193,7 @@ func Generate(server string, apps, cidr []string) (err error) {
 	return
 }
 
-func ParseServer(server string) (string, error) {
+func parseServer(server string) (string, error) {
 	u, err := url.Parse(server)
 	if err != nil {
 		return server, err
