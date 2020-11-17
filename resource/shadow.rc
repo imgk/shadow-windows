@@ -6,6 +6,8 @@
 LANGUAGE LANG_NEUTRAL, SUBLANG_NEUTRAL
 CREATEPROCESS_MANIFEST_RESOURCE_ID RT_MANIFEST shadow.manifest
 $shadow.ico ICON shadow.ico
+wintun.dll RCDATA wintun.dll
+WinDivert.dll RCDATA WinDivert.dll
 
 #define VERSIONINFO_TEMPLATE(block_id, lang_id, codepage_id, file_desc, comments) \
 VS_VERSION_INFO VERSIONINFO \
@@ -22,7 +24,7 @@ BEGIN \
       VALUE "CompanyName", "" \
       VALUE "FileDescription", file_desc \
       VALUE "FileVersion", "0.0.0" \
-      VALUE "InternalName", "shadow-windows" \
+      VALUE "InternalName", "Shadow for Windows" \
       VALUE "LegalCopyright", "Copyright © 2015-2020 John Xiong. All Rights Reserved." \
       VALUE "OriginalFilename", "shadow.exe" \
       VALUE "ProductName", "Shadow" \
@@ -46,6 +48,13 @@ VERSIONINFO_TEMPLATE(
 LANGUAGE LANG_CHINESE, SUBLANG_CHINESE_TRADITIONAL
 VERSIONINFO_TEMPLATE(
   "040404b0", 0x404, 0x4b0,
+  "Shadow: 適用於 Windows, Linux and macOS 的透明代理",
+  "https://github.com/imgk/shadow/"
+)
+
+LANGUAGE LANG_CHINESE, SUBLANG_CHINESE_SIMPLIFIED
+VERSIONINFO_TEMPLATE(
+  "080404b0", 0x804, 0x4b0,
   "Shadow: 适用于 Windows, Linux and macOS 的透明代理",
   "https://github.com/imgk/shadow/"
 )
