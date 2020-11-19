@@ -18,22 +18,19 @@ import (
 	"github.com/lxn/win"
 )
 
-const about = `Shadow: A Transparent Proxy for Windows, Linux and macOS
-Developed by John Xiong (https://imgk.cc)
-https://github.com/imgk/shadow-windows`
-
 type monitor struct {
 	// window
 	mainWindow *walk.MainWindow
 	windowSize walk.Size
 	icon       *walk.Icon
+	lang       *multiLanguage
 
 	// menus
-	menus      []declarative.MenuItem
+	menus []declarative.MenuItem
 
 	// server and mode
-	boxServer    *walk.ComboBox
-	boxMode      *walk.ComboBox
+	boxServer *walk.ComboBox
+	boxMode   *walk.ComboBox
 
 	// server list and mode list
 	servers  []string
@@ -56,22 +53,30 @@ type monitor struct {
 	running bool
 }
 
+func newMonitor() *monitor {
+	return &monitor{
+		windowSize: walk.Size{450, 175},
+		running:    false,
+	}
+}
+
 func (m *monitor) Run() (err error) {
 	m.icon, err = walk.NewIconFromResourceWithSize("$shadow.ico", walk.Size{16, 16})
 	if err != nil {
 		return
 	}
+	m.lang = lang()
 
 	m.menus = []declarative.MenuItem{
 		declarative.Menu{
-			Text: "&Server",
+			Text: m.lang.MenuServer,
 			Items: []declarative.MenuItem{
 				declarative.Action{
-					Text:        "&Manage",
+					Text:        m.lang.MenuManage,
 					OnTriggered: nil,
 				},
 				declarative.Action{
-					Text: "E&xit",
+					Text: m.lang.MenuExit,
 					OnTriggered: func() {
 						m.stop()
 						walk.App().Exit(0)
@@ -80,10 +85,10 @@ func (m *monitor) Run() (err error) {
 			},
 		},
 		declarative.Menu{
-			Text: "&Help",
+			Text: m.lang.MenuHelp,
 			Items: []declarative.MenuItem{
 				declarative.Action{
-					Text:        "About",
+					Text:        m.lang.MenuAbout,
 					OnTriggered: m.about,
 				},
 			},
@@ -93,14 +98,14 @@ func (m *monitor) Run() (err error) {
 	m.barItems = []declarative.StatusBarItem{
 		declarative.StatusBarItem{
 			AssignTo: &m.barItemStatus,
-			Text:     "Shadow is not Running",
+			Text:     m.lang.StatusOff,
 		},
 	}
 
 	err = declarative.MainWindow{
 		AssignTo:       &m.mainWindow,
 		Name:           "Shadow",
-		Title:          "Shadow: A Transparent Proxy for Windows, Linux and macOS",
+		Title:          m.lang.TitleInfo,
 		Icon:           m.icon,
 		Persistent:     true,
 		Layout:         declarative.VBox{},
@@ -108,21 +113,21 @@ func (m *monitor) Run() (err error) {
 		StatusBarItems: m.barItems,
 		Children: []declarative.Widget{
 			declarative.GroupBox{
-				Title:  "Shadow Config",
+				Title:  m.lang.ConfigPanel,
 				Layout: declarative.VBox{},
 				Children: []declarative.Widget{
 					declarative.Composite{
 						Layout: declarative.Grid{Columns: 2},
 						Children: []declarative.Widget{
 							declarative.TextLabel{
-								Text: "Server",
+								Text: m.lang.LabelServer,
 							},
 							declarative.ComboBox{
 								AssignTo: &m.boxServer,
 								Editable: true,
 							},
 							declarative.TextLabel{
-								Text: "Mode",
+								Text: m.lang.LabelMode,
 							},
 							declarative.ComboBox{
 								AssignTo: &m.boxMode,
@@ -138,7 +143,7 @@ func (m *monitor) Run() (err error) {
 					declarative.HSpacer{},
 					declarative.PushButton{
 						AssignTo: &m.buttonStart,
-						Text:     "Start",
+						Text:     m.lang.ButtonStart,
 						OnClicked: func() {
 							if m.running {
 								if err := m.stop(); err != nil {
@@ -154,7 +159,7 @@ func (m *monitor) Run() (err error) {
 					},
 					declarative.HSpacer{},
 					declarative.PushButton{
-						Text:     "Generate",
+						Text:      m.lang.ButtonGenerate,
 						OnClicked: nil,
 					},
 					declarative.HSpacer{},
@@ -184,7 +189,7 @@ func (m *monitor) Run() (err error) {
 	}
 	defer m.notifyIcon.Dispose()
 
-	m.notifyIcon.SetToolTip("A Transparent Proxy for Windows, Linux and macOS")
+	m.notifyIcon.SetToolTip(m.lang.ToolTip)
 	m.notifyIcon.SetIcon(m.icon)
 	m.notifyIcon.MouseDown().Attach(func(x, y int, button walk.MouseButton) {
 		switch button {
@@ -197,7 +202,7 @@ func (m *monitor) Run() (err error) {
 	})
 
 	exitAction := walk.NewAction()
-	if er := exitAction.SetText("E&xit"); er != nil {
+	if er := exitAction.SetText(m.lang.ActionExit); er != nil {
 		err = er
 		return
 	}
@@ -238,8 +243,8 @@ func (m *monitor) start() (err error) {
 	go m.run()
 
 	m.running = true
-	m.barItemStatus.SetText("Shadow is Running")
-	m.buttonStart.SetText("Stop")
+	m.barItemStatus.SetText(m.lang.StatusOn)
+	m.buttonStart.SetText(m.lang.ButtonStop)
 	return
 }
 
@@ -281,8 +286,8 @@ func (m *monitor) stop() (err error) {
 		os.Exit(777)
 	case <-m.app.Done():
 		m.running = false
-		m.barItemStatus.SetText("Shadow is not Running")
-		m.buttonStart.SetText("Start")
+		m.barItemStatus.SetText(m.lang.StatusOff)
+		m.buttonStart.SetText(m.lang.ButtonStart)
 	}
 	return
 }
@@ -326,9 +331,9 @@ func (m *monitor) ReadServers() {
 }
 
 func (m *monitor) about() {
-	walk.MsgBox(m.mainWindow, "About", about, walk.MsgBoxIconInformation)
+	walk.MsgBox(m.mainWindow, m.lang.AboutTitle, m.lang.AboutInfo, walk.MsgBoxIconInformation)
 }
 
 func (m *monitor) error(err error) {
-	walk.MsgBox(m.mainWindow, "Error", err.Error(), walk.MsgBoxIconError)
+	walk.MsgBox(m.mainWindow, m.lang.ErrorTitle, err.Error(), walk.MsgBoxIconError)
 }
