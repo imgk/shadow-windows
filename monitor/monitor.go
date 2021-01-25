@@ -1,6 +1,6 @@
 // +build windows
 
-package main
+package monitor
 
 import (
 	"bytes"
@@ -53,7 +53,7 @@ type monitor struct {
 	running bool
 }
 
-func newMonitor() *monitor {
+func NewMonitor() *monitor {
 	return &monitor{
 		windowSize: walk.Size{450, 175},
 		running:    false,
