@@ -6,8 +6,6 @@
 LANGUAGE LANG_NEUTRAL, SUBLANG_NEUTRAL
 CREATEPROCESS_MANIFEST_RESOURCE_ID RT_MANIFEST shadow.manifest
 $shadow.ico ICON shadow.ico
-wintun.dll RCDATA wintun.dll
-WinDivert.dll RCDATA WinDivert.dll
 
 #define VERSIONINFO_TEMPLATE(block_id, lang_id, codepage_id, file_desc, comments) \
 VS_VERSION_INFO VERSIONINFO \
