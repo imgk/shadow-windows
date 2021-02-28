@@ -6,7 +6,6 @@ import (
 	"bufio"
 	"encoding/json"
 	"errors"
-	"fmt"
 	"io"
 	"io/ioutil"
 	"net"
@@ -154,10 +153,6 @@ func parseRules(file string) (apps, cidr []string, err error) {
 }
 
 func generate(server string, apps, cidr []string) (err error) {
-	proxyServer, err := parseServer(server)
-	if err != nil {
-		return
-	}
 	config, err := absFilePath("config.json")
 	if err != nil {
 		return
@@ -167,13 +162,27 @@ func generate(server string, apps, cidr []string) (err error) {
 	if err = json.Unmarshal(b, &conf); err != nil {
 		return
 	}
-	nameServer, err := parseServer(conf.NameServer)
+
+	type Proto struct {
+		Proto string `json:"protocol"`
+		URL   string `json:"url"`
+	}
+	proto, err := func(s string) (Proto, error) {
+		u, err := url.Parse(s)
+		if err != nil {
+			return Proto{}, err
+		}
+		return Proto{Proto: u.Scheme, URL: s}, nil
+	}(server)
+	if err != nil {
+		return
+	}
+	bb, err := json.Marshal(&proto)
 	if err != nil {
 		return
 	}
 
-	conf.Server = server
-	conf.FilterString = fmt.Sprintf("outbound and ip and ip.DstAddr != %v and ip.DstAddr != %v", proxyServer, nameServer)
+	conf.Server = bb
 	conf.IPCIDRRules.Proxy = append(cidr, "198.18.0.0/16")
 	conf.AppRules.Proxy = apps
 
@@ -191,19 +200,4 @@ func generate(server string, apps, cidr []string) (err error) {
 		return
 	}
 	return
-}
-
-func parseServer(server string) (string, error) {
-	u, err := url.Parse(server)
-	if err != nil {
-		return server, err
-	}
-
-	addr, err := net.ResolveUDPAddr("udp", u.Host)
-	if err != nil {
-		return server, err
-	}
-
-	server, _, err = net.SplitHostPort(addr.String())
-	return server, err
 }

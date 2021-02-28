@@ -23,7 +23,7 @@ type monitor struct {
 	mainWindow *walk.MainWindow
 	windowSize walk.Size
 	icon       *walk.Icon
-	lang       *multiLanguage
+	lang       *Language
 
 	// menus
 	menus []declarative.MenuItem
@@ -54,10 +54,11 @@ type monitor struct {
 }
 
 func NewMonitor() *monitor {
-	return &monitor{
+	m := &monitor{
 		windowSize: walk.Size{450, 175},
 		running:    false,
 	}
+	return m
 }
 
 func (m *monitor) Run() (err error) {

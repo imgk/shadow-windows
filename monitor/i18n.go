@@ -7,7 +7,7 @@ import (
 	"golang.org/x/text/language"
 )
 
-func lang() *multiLanguage {
+func lang() *Language {
 	tag := language.English
 
 	if langs, err := windows.GetUserPreferredUILanguages(windows.MUI_LANGUAGE_NAME); err == nil {
@@ -36,35 +36,57 @@ func lang() *multiLanguage {
 	return languages[language.English.String()]
 }
 
-type multiLanguage struct {
+// Language is ...
+// support multi language
+type Language struct {
+	// Tag is ...
 	language.Tag
 
+	// AboutInfo is ...
 	AboutInfo string
+	// TitleInfo is ...
 	TitleInfo string
 
+	// MenuServer is ...
 	MenuServer string
+	// MenuManage is ...
 	MenuManage string
-	MenuExit   string
+	// MenuExit is ...
+	MenuExit string
 
-	MenuHelp  string
+	// MenuHelp is ...
+	MenuHelp string
+	// MenuAbout is ...
 	MenuAbout string
 
+	// StatusOff is ...
 	StatusOff string
-	StatusOn  string
+	// StatusOn is ...
+	StatusOn string
 
+	// ConfigPanel is ...
 	ConfigPanel string
+	// LabelServer is ...
 	LabelServer string
-	LabelMode   string
+	// LabelMode is ...
+	LabelMode string
 
-	ButtonStart    string
-	ButtonStop     string
+	// ButtonStart is ...
+	ButtonStart string
+	// ButtonStop is ...
+	ButtonStop string
+	// ButtonGenerate is ...
 	ButtonGenerate string
 
+	// ToolTip is ...
 	ToolTip string
 
+	// ActionExit is ...
 	ActionExit string
 
+	// AboutTitle is ...
 	AboutTitle string
+	// Error Title is ...
 	ErrorTitle string
 }
 
@@ -76,8 +98,8 @@ const aboutCN = `Shadow: 适用于 Windows, Linux and macOS 的透明代理
 由 John Xiong 开发 (https://imgk.cc)
 https://github.com/imgk/shadow-windows`
 
-var languages = map[string]*multiLanguage{
-	language.English.String(): &multiLanguage{
+var languages = map[string]*Language{
+	language.English.String(): &Language{
 		Tag:            language.English,
 		AboutInfo:      aboutEN,
 		TitleInfo:      "Shadow: A Transparent Proxy for Windows, Linux and macOS",
@@ -99,7 +121,7 @@ var languages = map[string]*multiLanguage{
 		AboutTitle:     "About",
 		ErrorTitle:     "Error",
 	},
-	language.SimplifiedChinese.String(): &multiLanguage{
+	language.SimplifiedChinese.String(): &Language{
 		Tag:            language.SimplifiedChinese,
 		AboutInfo:      aboutCN,
 		TitleInfo:      "Shadow: 适用于 Windows, Linux and macOS 的透明代理",
