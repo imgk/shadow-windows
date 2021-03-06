@@ -94,7 +94,7 @@ const aboutEN = `Shadow: A Transparent Proxy for Windows, Linux and macOS
 Developed by John Xiong (https://imgk.cc)
 https://github.com/imgk/shadow-windows`
 
-const aboutCN = `Shadow: 适用于 Windows, Linux and macOS 的透明代理
+const aboutCN = `Shadow: 适用于 Windows, Linux 和 macOS 的透明代理
 由 John Xiong 开发 (https://imgk.cc)
 https://github.com/imgk/shadow-windows`
 
