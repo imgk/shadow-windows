@@ -46,13 +46,13 @@ VERSIONINFO_TEMPLATE(
 LANGUAGE LANG_CHINESE, SUBLANG_CHINESE_TRADITIONAL
 VERSIONINFO_TEMPLATE(
   "040404b0", 0x404, 0x4b0,
-  "Shadow: 適用於 Windows, Linux and macOS 的透明代理",
+  "Shadow: 適用於 Windows, Linux 和 macOS 的透明代理",
   "https://github.com/imgk/shadow/"
 )
 
 LANGUAGE LANG_CHINESE, SUBLANG_CHINESE_SIMPLIFIED
 VERSIONINFO_TEMPLATE(
   "080404b0", 0x804, 0x4b0,
-  "Shadow: 适用于 Windows, Linux and macOS 的透明代理",
+  "Shadow: 适用于 Windows, Linux 和 macOS 的透明代理",
   "https://github.com/imgk/shadow/"
 )
