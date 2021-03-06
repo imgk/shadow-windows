@@ -124,7 +124,7 @@ var languages = map[string]*Language{
 	language.SimplifiedChinese.String(): &Language{
 		Tag:            language.SimplifiedChinese,
 		AboutInfo:      aboutCN,
-		TitleInfo:      "Shadow: 适用于 Windows, Linux and macOS 的透明代理",
+		TitleInfo:      "Shadow: 适用于 Windows, Linux 和 macOS 的透明代理",
 		MenuServer:     "服务器(&S)",
 		MenuManage:     "管理服务器(&M)",
 		MenuExit:       "退出(&E)",
@@ -138,7 +138,7 @@ var languages = map[string]*Language{
 		ButtonStart:    "开始",
 		ButtonStop:     "停止",
 		ButtonGenerate: "生成配置",
-		ToolTip:        "适用于 Windows, Linux and macOS 的透明代理",
+		ToolTip:        "适用于 Windows, Linux 和 macOS 的透明代理",
 		ActionExit:     "退出(&X)",
 		AboutTitle:     "关于",
 		ErrorTitle:     "错误",
